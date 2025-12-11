@@ -140,3 +140,4 @@ C:\Users\hqcka\source\repos\Hemmuppgiftcrud\Hemmuppgiftcrud\obj\Debug\net8.0\ref
 C:\Users\hqcka\source\repos\Hemmuppgiftcrud\Hemmuppgiftcrud\obj\Debug\net8.0\Hemmuppgiftcrud.pdb
 C:\Users\hqcka\source\repos\Hemmuppgiftcrud\Hemmuppgiftcrud\obj\Debug\net8.0\Hemmuppgiftcrud.genruntimeconfig.cache
 C:\Users\hqcka\source\repos\Hemmuppgiftcrud\Hemmuppgiftcrud\obj\Debug\net8.0\ref\Hemmuppgiftcrud.dll
+C:\Users\hqcka\source\repos\Hemmuppgiftcrud\Hemmuppgiftcrud\obj\Debug\net8.0\Hemmuppgiftcrud.sourcelink.json

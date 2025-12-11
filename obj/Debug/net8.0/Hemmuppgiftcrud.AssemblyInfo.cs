@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Hemmuppgiftcrud")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a067a706c0a98add7860ad933026481806351df8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Hemmuppgiftcrud")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Hemmuppgiftcrud")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

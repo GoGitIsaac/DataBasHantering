@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 namespace Hemmuppgiftcrud
 {
     /*
-     * Detta är en keylless entitet (INGEN PK) 
-     * Den representerar en SQL View, en spara SELECT-query
-     * Vi använder dessa Views I en EF Core som gör att den kan läsa den precis som en vanlig tabell
+     * This is a keyless entity (NO PK) 
+     * It represent an SQL view, a saved SELECT-query
+     * We use these Views in a EF Core so that it can read it as if it was a normal table. 
      */
-    [Keyless] // frivillig. ingen påverkan, påverkar bara att EF inte förväntar sig en primary key
+    [Keyless] // Optional. No Impact, Only impacts so that EF doesn't expect a PK
     public class OrderSummary
     {
         public int OrderId { get; set; }

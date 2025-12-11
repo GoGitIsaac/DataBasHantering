@@ -114,6 +114,11 @@ namespace Hemmuppgiftcrud
                 e.Property(x => x.Price).IsRequired();
 
             });
+
+            modelbuilder.Entity<Order>().HasIndex(o => o.OrderDate);
+            modelbuilder.Entity<Order>().HasIndex(o => o.CustomerId);
+
+            // TODO?: Maybe Optimise the other Stop watches
         }
 
     }

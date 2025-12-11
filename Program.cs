@@ -14,7 +14,7 @@ static async Task Menu()
     while (true)
     {
 
-        Console.WriteLine("\n 1 = CustomerMenu | 2= OrderMenu | 3 = ProductMenu | 4 = Exit | 5 = return");
+        Console.WriteLine("\n 1 = CustomerMenu | 2 = OrderMenu | 3 = ProductMenu | 4 = Exit");
         string options = Console.ReadLine()?.ToLower() ?? string.Empty;
         switch (options)
         {
@@ -28,10 +28,7 @@ static async Task Menu()
                 await ProductMenuAsync();
                 break;
             case "4":
-                Console.WriteLine("Exiting...");
-                break;
-            case "5":
-
+                Console.WriteLine("Exiting... (Not Really)");
                 break;
             default:
                 Console.WriteLine("Please select a valid option");
@@ -58,10 +55,16 @@ static async Task NumberOfOrdersAsync()
 static async Task ListCustomerAsync()
 {
     using var db = new ShopContext();
+
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+
     var customers = await db.Customers
                   .AsNoTracking().Include(o => o.Orders)
                   .OrderBy(o => o.CustomerId)
                   .ToListAsync();
+    sw.Stop();
+
+    Console.WriteLine($"Total time for query {sw.ElapsedMilliseconds} ms");
 
     Console.WriteLine("\n Id | Name | City | Email");
     foreach (var customer in customers)
@@ -82,15 +85,15 @@ static async Task CustomerMenuAsync()
     while (true)
     {
 
-        // Delar upp raden på mellanslag: t.ex "edit 2" --> ["edit", "2"]
+        // Splits the rows up by spaces: t.ex "edit 2" --> ["edit", "2"]
 
         Console.WriteLine("\n 1 = ListCustomers | 2 = AddCustomer | 3 <id> = EditCustomer | 4 <id> = Delete | 5 = Menu");
         Console.WriteLine("> ");
 
         string customerMenu = Console.ReadLine()?.Trim() ?? string.Empty;
-        var parts = customerMenu.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = customerMenu.Split(' ');
 
-        var cmd = parts[0].ToLowerInvariant();
+        var cmd = parts[0];
         switch (cmd)
         {
             case "1":
@@ -112,7 +115,7 @@ static async Task CustomerMenuAsync()
                 // Delete A Customer
                 if (parts.Length < 2 || !int.TryParse(parts[1], out var idD))
                 {
-                    Console.WriteLine("Usage: 5 <id>");
+                    Console.WriteLine("Usage: 4 <id>");
                     break;
                 }
                 await DeleteCustomerAsync(idD);
@@ -142,6 +145,7 @@ static async Task AddCustomerAsync()
 
     Console.Write("Email: ");
     var email = Console.ReadLine()?.Trim() ?? string.Empty;
+    email = EncryptionHelper.Encrypt(email);
 
     if (string.IsNullOrEmpty(email) || email.Length > 100)
     {
@@ -176,7 +180,7 @@ static async Task DeleteCustomerAsync(int id)
 {
     using var db = new ShopContext();
 
-    // Hämta raden du vill ta bort igen
+    // Fetch the line you want to remove again
     var customer = await db.Customers.FirstOrDefaultAsync((c => c.CustomerId == id));
     if (customer == null)
     {
@@ -198,6 +202,8 @@ static async Task DeleteCustomerAsync(int id)
 
 
 // List Order Summary View = Makes it so that we can see a summary of orders with customer info
+// Not Used at this current Time
+/*
 static async Task ListOrderSummary()
 {
     using var db = new ShopContext();
@@ -210,12 +216,13 @@ static async Task ListOrderSummary()
         Console.WriteLine($"{summary.OrderId} | {summary.OrderDate:d} | {summary.TotalAmount} |{summary.CustomerEmail} ");
     }
 }
+*/
 
 static async Task EditCustomerAsync(int id)
 {
     using var db = new ShopContext();
 
-    // Hämta radre vi vill uppdatera
+    // Fetch the line we want to update
     var customer = await db.Customers.FirstOrDefaultAsync((x => x.CustomerId == id));
     if (customer == null)
     {
@@ -232,6 +239,7 @@ static async Task EditCustomerAsync(int id)
     }
 
     // Uppdatera email för en specifik Person
+    customer.Email = EncryptionHelper.Decrypt(customer.Email);
     Console.Write($"{customer.Email} ");
     var email = Console.ReadLine()?.Trim() ?? string.Empty;
     if (!string.IsNullOrEmpty(email))
@@ -296,7 +304,7 @@ static async Task AddOrderAsync()
     {
         Console.Write("Add order row? Y/N");
         var answer = Console.ReadLine()?.Trim().ToLowerInvariant();
-        if (answer == "y") break;
+        if (answer != "y") break;
 
         var products = await db.Products.AsNoTracking()
             .OrderBy(o => o.ProductId).ToListAsync();
@@ -364,10 +372,16 @@ static async Task ListOrdersPagedAsync(int page, int pageSize)
 {
     using var db = new ShopContext();
 
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+
     var query = db.Orders.Include(o => o.Customer).AsNoTracking().OrderByDescending(o => o.OrderDate);
 
     var totalOrderCount = await query.CountAsync();
     var totalPages = (int)Math.Ceiling(totalOrderCount / (double)pageSize);
+
+    sw.Stop();
+
+    Console.WriteLine($"Total time for query {sw.ElapsedMilliseconds} ms");
 
     /* total count = 50 ordrar, vi har pageSize av 10 -> 50 / 10 = 5
      * totalCount = 50 Ordrar / 1 Antal ordrar per sida = 50 sidor
@@ -395,9 +409,12 @@ static async Task OrderMenuAsync()
     while (true)
     {
 
-        Console.WriteLine("\n 1 = ListOrder | 2= AddOrder | 3 = EditOrder | 4 = NumberOfOrders | 5 = ListOrders | 6 = DeleteOrder | 7 = Menu");
+        Console.WriteLine("\n 1 = ListOrder | 2 = AddOrder | 3 <Id> = EditOrder | 4 = NumberOfOrders | 5 <Id> = DeleteOrder | 6 = Menu");
         string orderMenu = Console.ReadLine()?.Trim() ?? string.Empty;
-        switch (orderMenu)
+        var parts = orderMenu.Split(' ');
+
+        var cmd = parts[0];
+        switch (cmd)
         {
             case "1":
                 await ListOrdersPagedAsync(1, 10);
@@ -406,28 +423,39 @@ static async Task OrderMenuAsync()
                 await AddOrderAsync();
                 break;
             case "3":
-                await EditOrderAsync();
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var orderIdE))
+                {
+                    Console.WriteLine("Usage: 3 <id>");
+                    break;
+                }
+                await EditOrderAsync(orderIdE);
                 break;
             case "4":
                 await NumberOfOrdersAsync();
                 break;
             case "5":
-                await ListOrdersAsync();
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var orderIdD))
+                {
+                    Console.WriteLine("Usage: 5 <id>");
+                    break;
+                }
+                await DeleteOrderAsync(orderIdD);
                 break;
             case "6":
-                await DeleteOrderAsync();
-                break;
-            case "7":
                 await Menu();
                 break;
+            /*case "5": // In Testing: Not Needed
+                await ListOrdersAsync();
+                break;*/
             default:
                 Console.WriteLine("Please select a valid option");
                 break;
-
+                
         }
     }
 }
-
+// Not needed in current version. Save for future reference
+/*
 static async Task ListOrdersAsync()
 {
     using var db = new ShopContext();
@@ -443,49 +471,300 @@ static async Task ListOrdersAsync()
         Console.WriteLine($"{order.OrderId} | {order.Customer?.Email} | {order.OrderRows}");
     }
 }
-
-static async Task EditOrderAsync()
+*/
+static async Task EditOrderAsync(int id)
 {
+    using var db = new ShopContext();
 
+    var order = await db.Orders.FindAsync(id);
+    if (order == null)
+    {
+        Console.WriteLine("Order not found!");
+        return;
+    }
+
+    Console.WriteLine($"Editing Order {id}");
+
+    // Delete old order rows
+    var oldRows = db.OrderRows.Where(r => r.OrderId == id);
+    db.OrderRows.RemoveRange(oldRows);
+
+    // Reuse the same logic as AddOrder
+    var customers = await db.Customers.AsNoTracking()
+        .OrderBy(o => o.CustomerId).ToListAsync();
+
+    if (!customers.Any())
+    {
+        Console.WriteLine("No Customers found");
+        return;
+    }
+
+    foreach (var customer in customers)
+    {
+        Console.WriteLine($"{customer.CustomerId} | {customer.Name} | {customer.Email}");
+    }
+
+    Console.Write("CustomerId: ");
+    if (!int.TryParse(Console.ReadLine(), out var customerId) ||
+        !customers.Any(c => c.CustomerId == customerId))
+    {
+        Console.WriteLine("Invalid input of customerId");
+        return;
+    }
+
+    order.CustomerId = customerId;
+    order.OrderDate = DateTime.Today;
+    order.Status = "Pending";
+
+    var orderRows = new List<OrderRow>();
+
+    while (true)
+    {
+        Console.Write("Add order row? Y/N");
+        var answer = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (answer != "y") break;
+
+        var products = await db.Products.AsNoTracking()
+            .OrderBy(o => o.ProductId).ToListAsync();
+
+        if (!products.Any())
+        {
+            Console.WriteLine("No Products Found");
+            return;
+        }
+
+        foreach (var product in products)
+        {
+            Console.WriteLine($"{product.ProductId} | {product.Name} | {product.Price}");
+        }
+
+        Console.Write("ProductId: ");
+        if (!int.TryParse(Console.ReadLine(), out var productId))
+        {
+            Console.WriteLine("Invalid input of productId");
+            continue;
+        }
+
+        var chosenProduct = await db.Products
+            .FirstOrDefaultAsync(p => p.ProductId == productId);
+
+        if (chosenProduct == null)
+        {
+            Console.WriteLine("Product not found");
+            continue;
+        }
+
+        Console.Write("Quantity: ");
+        if (!int.TryParse(Console.ReadLine(), out var quantity) || quantity <= 0)
+        {
+            Console.WriteLine("Invalid input of quantity");
+            continue;
+        }
+
+        orderRows.Add(new OrderRow
+        {
+            ProductId = productId,
+            Quantity = quantity,
+            UnitPrice = chosenProduct.Price
+        });
+    }
+
+    order.TotalAmount = orderRows.Sum(x => x.UnitPrice * x.Quantity);
+    order.OrderRows = orderRows;
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine($"Order {order.OrderId} updated!");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine("DB Error: " + ex.GetBaseException().Message);
+    }
 }
 
-static async Task DeleteOrderAsync()
-{
 
+
+static async Task DeleteOrderAsync(int id)
+{
+    using var db = new ShopContext();
+
+    var order = await db.Orders.FindAsync(id);
+    if (order == null)
+    {
+        Console.WriteLine("Order not found!");
+        return;
+    }
+
+    db.Orders.Remove(order);
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Order deleted!");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine("Error deleting order: " + ex.GetBaseException().Message);
+    }
 }
+
 
 static async Task ProductMenuAsync()
 {
     while (true)
     {
 
-        Console.WriteLine("\n 1 = ListProduct | 2 = AddProduct | 3 = EditProduct | 4 = DeleteProduct | 6 = ProductSales | 5 = return");
-        string productMenu = Console.ReadLine()?.ToLower() ?? string.Empty;
-        switch (productMenu)
+        Console.WriteLine("\n 1 = ListProduct | 2 = AddProduct | 3 = EditProduct | 4 <Id> = DeleteProduct | 5 = ProductSales | 6 = Menu");
+        string productMenu = Console.ReadLine()?.ToLower() ?? " ";
+        var parts = productMenu.Split(' ');
+
+        var cmd = parts[0];
+        switch (cmd)
         {
             case "1":
-                //await ListProductAsync();
+                await ListProductAsync();
                 break;
             case "2":
-                //await AddProductAsync();
+                await AddProductAsync();
                 break;
             case "3":
-                //await EditProductAsync();
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var productIdE))
+                {
+                    Console.WriteLine("Usage: 3 <id>");
+                    break;
+                }
+                await EditProductAsync(productIdE);
                 break;
             case "4":
-                //await DeleteProductAsync();
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var productId))
+                {
+                    Console.WriteLine("Usage: 4 <id>");
+                    break;
+                }
+                await DeleteProductAsync(productId);
                 break;
             case "5":
-                await Menu();
+                await ProductSalesAsync();
                 break;
             case "6":
-                await ProductSalesAsync();
+                await Menu();
                 break;
             default:
                 Console.WriteLine("Please select a valid option");
                 break;
 
         }
+    }
+}
+
+static async Task ListProductAsync()
+{
+    using var db = new ShopContext();
+
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var products = await db.Products
+        .AsNoTracking()
+        .OrderBy(p => p.ProductId)
+        .ToListAsync();
+
+    sw.Stop();
+
+    Console.WriteLine($"Total time for query {sw.ElapsedMilliseconds} ms");
+
+    Console.WriteLine("\n Id | Name | Price");
+    foreach (var product in products)
+    {
+        Console.WriteLine($"{product.ProductId} | {product.Name} | {product.Price}");
+    }
+}
+
+static async Task AddProductAsync()
+{
+    using var db = new ShopContext();
+
+    Console.WriteLine("Name: ");
+    var name = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (string.IsNullOrEmpty(name))
+    {
+        Console.WriteLine("Name is required.");
+        return;
+    }
+    Console.Write("Price: ");
+    if (!decimal.TryParse(Console.ReadLine(), out var price) || price < 0)
+    {
+        Console.WriteLine("Invalid price.");
+        return;
+    }
+
+    db.Products.Add(new Product { Name = name, Price = price });
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Product added!");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine("DB Error (Maybe duplicate?)! " + exception.GetBaseException().Message);
+    }
+}
+
+static async Task DeleteProductAsync(int id)
+{
+    using var db = new ShopContext();
+    var product = await db.Products.FirstOrDefaultAsync((c => c.ProductId == id));
+    if (product == null)
+    {
+        Console.WriteLine("Product not found!");
+        return;
+    }
+    db.Products.Remove(product);
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Product deleted!");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine(exception.Message);
+    }
+}
+
+static async Task EditProductAsync(int Id)
+{
+    using var db = new ShopContext();
+
+    var product = await db.Products.FindAsync(Id);
+    if (product == null)
+    {
+        Console.WriteLine("Product not found!");
+        return;
+    }
+
+    Console.WriteLine($"Editing Product {Id}");
+    Console.Write($"Name: ");
+    var name = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(name))
+    {
+        product.Name = name;
+    }
+    Console.Write($"Price: ");
+    if (!decimal.TryParse(Console.ReadLine(), out var price) || price < 0)
+    {
+        Console.WriteLine("Invalid price.");
+        return;
+    }
+
+    product.Price = price;
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Product updated!");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine("DB Error (Maybe duplicate?)! " + exception.GetBaseException().Message);
     }
 }
 
