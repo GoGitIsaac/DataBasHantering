@@ -18,6 +18,10 @@ namespace Hemmuppgiftcrud
         public string? Email { get; set; }
         public string? City { get; set; }
 
+        // Hashed Name storage
+        public string? CustomerNameHash { get; set; }
+        public string? CustomerNameSalt { get; set; }
+
         public List<Order> Orders { get; set; } = new();
     }
 }

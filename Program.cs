@@ -70,6 +70,7 @@ static async Task ListCustomerAsync()
     foreach (var customer in customers)
     {
         Console.WriteLine($"{customer.CustomerId} | {customer.Name} | {customer.City} | {customer.Email}");
+        customer.Email = EncryptionHelper.Encrypt(customer.Email);
         var customerOrder = customer.Orders?.Count;
         Console.WriteLine("-------------- ORDERS --------------");
         foreach (var order in customer.Orders)
@@ -87,7 +88,7 @@ static async Task CustomerMenuAsync()
 
         // Splits the rows up by spaces: t.ex "edit 2" --> ["edit", "2"]
 
-        Console.WriteLine("\n 1 = ListCustomers | 2 = AddCustomer | 3 <id> = EditCustomer | 4 <id> = Delete | 5 = Menu");
+        Console.WriteLine("\n 1 = ListCustomers | 2 = AddCustomer | 3 <id> = EditCustomer | 4 <id> = Delete | 5 = Menu | 6 = HashACustomer");
         Console.WriteLine("> ");
 
         string customerMenu = Console.ReadLine()?.Trim() ?? string.Empty;
@@ -119,6 +120,38 @@ static async Task CustomerMenuAsync()
                     break;
                 }
                 await DeleteCustomerAsync(idD);
+                break;
+            case "6":
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var hashId))
+                {
+                    Console.WriteLine("Usage: 6 <id>");
+                    break;
+                }
+                using (var db = new ShopContext())
+                {
+                    var customer = await db.Customers.FindAsync(hashId);
+                    if (customer == null)
+                    {
+                        Console.WriteLine("Customer not found!");
+                        break;
+                    }
+
+                    var salt = HashingHelper.GenerateSalt();
+
+                    var hashedName = HashingHelper.HashWithSalt(customer.Name, salt);
+
+                    customer.Name = hashedName;
+
+                    try
+                    {
+                        await db.SaveChangesAsync();
+                        Console.WriteLine("Customer name hashed!");
+                    }
+                    catch (DbUpdateException ex)
+                    {
+                        Console.WriteLine("DB Error: " + ex.GetBaseException().Message);
+                    }
+                }
                 break;
             case "5":
                 await Menu();
@@ -162,13 +195,15 @@ static async Task AddCustomerAsync()
         return;
     }
 
+                                                                                                                                                                         email = EncryptionHelper.Decrypt(email);
+
     using var db = new ShopContext();
     db.Customers.Add(new Customer { Name = name, Email = email, City = city, });
     try
     {
         // Spara våra ändringar
         await db.SaveChangesAsync();
-        Console.WriteLine("Product added!");
+        Console.WriteLine("Customer Added!");
     }
     catch (DbUpdateException exception)
     {
@@ -239,8 +274,8 @@ static async Task EditCustomerAsync(int id)
     }
 
     // Uppdatera email för en specifik Person
-    customer.Email = EncryptionHelper.Decrypt(customer.Email);
     Console.Write($"{customer.Email} ");
+    customer.Email = EncryptionHelper.Encrypt(customer.Email);
     var email = Console.ReadLine()?.Trim() ?? string.Empty;
     if (!string.IsNullOrEmpty(email))
     {
@@ -781,3 +816,18 @@ static async Task ProductSalesAsync()
     }
 }
 
+/* Was trying to copy Arber but visual studio crashed so I gave up.
+static async Task AddOrderWIthTransactionAsync(){
+    using var db = new ShopContext();
+    using var transaction = await db.Database.BeginTransactionAsync();
+    try
+    {
+        var order = new Order
+        {
+            CustomerId = customerId,
+            OrderDate = DateTime.Today,
+            Status = "Pending",
+            TotalAmount = 100
+        };
+}
+*/ 

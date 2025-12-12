@@ -50,7 +50,7 @@ namespace Hemmuppgiftcrud
                 await db.SaveChangesAsync();
                 Console.WriteLine("Products seeded");
             }
-            db.Products.AddRange( //lägg till random varor
+            db.Products.AddRange( // Add random products
                 new Product { Name = "Hammer", Price = 49 },
                 new Product { Name = "Spike", Price = 19 },
                 new Product { Name = "Keyboard", Price = 499 },
